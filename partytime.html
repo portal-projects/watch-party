@@ -56,7 +56,11 @@
                     if (response.status === 'error') {
                         alert(`There was an error: ${response.error}`);
                     } else {
-                        window.location = '/';
+                        if (location.href.split('https://portal-projects.github.io/watch-party').length === 2) {
+                            window.location = '/watch-party'
+                        } else {
+                            window.location = '/';
+                        }
                     }
                 });
             });
