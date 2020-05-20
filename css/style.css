@@ -1,6 +1,6 @@
 * {
-  margin: 0;
-  padding: 0;
+    margin: 0;
+    padding: 0;
 }
 body {
     background: hsla(224, 13%, 15%, 1);
@@ -10,10 +10,14 @@ body {
     width: 35%;
     margin: 20px auto;
 }
-#message {
+div {
     position: relative;
     text-align: center;
     margin-top: 10px;
+}
+audio {
+    display: inline-block;
+    text-align: center;
 }
 h2 {
     color: #fff;
