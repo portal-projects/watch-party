@@ -8,22 +8,28 @@
 
 <body>
     <h1>Party Scheduler</h1>
-    <form id="info" name="info">
+    <form id="info" name="info" method="post" action="confirm.php">
         <label for="password">Password:</label>
         <input type="password" name="password" id="password" required>
-        <label for="video">VideoID:</label>
-        <input type="text" name="video" id="video" required>
-        <!-- <label for="langth">Video Length in Seconds:</label>
-        <input type="text" name="langth" id="langth"> -->
-        <label for="time">Epoch Time of Party (See <a target="_blank" rel="noopener noreferrer"
-                href="https://www.epochconverter.com/">https://www.epochconverter.com/</a>):</label>
+        <label for="time">Epoch Time of Party (See <a target="_blank" rel="noopener noreferrer" href="https://www.epochconverter.com/">https://www.epochconverter.com/</a>):</label>
         <input type="text" name="time" id="time" required>
+        <!--<label for="langth">Video/Audio Length in Seconds:</label>
+        <input type="text" name="langth" id="langth" required>
+		It will be necessary to include a statement on submission that makes videolength equal to the .getDuration() of the audio file. This could alternatively be done on the front end with JS, but that might be bad practice.-->
+        <label for="youtube"><br />YouTube Video</label>
+        <input type="radio" name="mediatype" id="youtube" value="youtube" onclick="audioorvideo()" required>
+        <label for="audio">Audio</label>
+        <input type="radio" name="mediatype" id="audio" value="audio" onclick="audioorvideo()" required>
+        <label for="video" id="idl" style="display:none"><br />VideoID:</label>
+        <input type="hidden" name="medialink" id="video" required>
+        <label for="afile" id="al" style="display:none"><br />Audio file link (MUST be .mp3):</label>
+        <input type="hidden" name="medialink" id="afile" required>
         <label for="intermission"><br />Include an intermission?</label>
         <input type="checkbox" name="intermission" id="intermission" onclick="isthereani()">
         <label for="ilength" id="il1" style="display:none">How long will the intermission be (in seconds)?</label>
-        <input type="text" name="ilength" id="ilength" style="display:none">
+        <input type="hidden" name="ilength" id="ilength">
         <label for="itime" id="il2" style="display:none">At what point in the video will it start (in seconds)?</label>
-        <input type="text" name="itime" id="itime" style="display:none">
+        <input type="hidden" name="itime" id="itime">
         <input type="submit" value="Confirm">
     </form>
     <script>
@@ -48,6 +54,12 @@
                     'video': $('input#video').val(),
                     'time': $('input#time').val()
                 };
+				if ($('input#video').val()) {
+                    payload['video'] = $('input#video').val();
+                } else {
+					payload['afile'] = $('input#afile').val();
+				}
+				//Some statement that sets a file as "1" or "" depending on which radio button was highlighted. if youtube = "", if audio = "1"
                 if ($('input#intermission').val()) {
                     payload['ilength'] = $('input#ilength').val();
                     payload['itime'] = $('input#itime').val();
