@@ -8,6 +8,8 @@ var itime;
 var ilength;
 var video_started;
 var video_length;
+var isaudio;
+var audiosrc;
 function getHost() {
     if (location.href.split('http://localhost:8080').length === 2) {
         return ""; // local dev
@@ -23,6 +25,8 @@ $.get(getHost() + "api/party_info", function(data){
     ilength = Number(data.intermission_length);
     video_started = Number(data.video_start_time);
     video_length = Number(data.video_length);
+	//isaudio = Boolean(data.isaudio); <--isaudio could either be empty or "1" depending on which radio button was selected when the form was submitted. (An empty string has a value of "false," any non-empty string has a value of "true.")
+	//audiosrc = data.audiosrc;
     id = data.id;
     l1 = l2 = l3 = true;
     load_player();
@@ -36,10 +40,13 @@ var is_intermission = false;
 var intermission_time;
 
 function load_player() {
-    if (l1 === true && l2 === true && l3 === true) {
+    if (l1 === true && l2 === true && l3 === true && isaudio === false) {
+        vtimestamp();
         tag.src = "https://www.youtube.com/iframe_api";
         firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-        timestamp();
+    }
+    if (l1 === true && l2 === true && l3 === true && isaudio === true) {
+        audioready();
     }
 }
 function timestamp_calc() {
@@ -47,17 +54,16 @@ function timestamp_calc() {
     if (ilength === 0 || itime > (now.getTime()/1000) - video_started) {
         true_timestamp = (Number(now.getTime())/1000 - video_started);
         is_intermission = false;
-    } else if (itime <= (now.getTime()/1000 - video_started) && itime + ilength > (now.getTime()/1000 - video_started)) {
+    } else if (itime <= (now.getTime()/1000 - video_started) && itime + ilength > Math.ceil(now.getTime()/1000 - video_started) + 0.1) {
         true_timestamp = itime;
         intermission_time = (itime + ilength) - (now.getTime()/1000 - video_started);
         is_intermission = true;
-    } else if (itime + ilength <= (now.getTime()/1000 - video_started)) {
+    } else if (itime + ilength <= Math.ceil(now.getTime()/1000 - video_started) + 0.1) {
         true_timestamp = (Number(now.getTime())/1000 - video_started) - ilength;
         is_intermission = false;
     }
     if (itime + ilength == Math.ceil(now.getTime()/1000 - video_started)) {
-        player.playVideo(); //This may be bad practice. I placed this statement in timestamp_calc() because now is defined here, but all my other player controllers are in timestamp().
-        player.seekTo(true_timestamp, true);
+        iend();
     }
     var HMSTime = Math.abs(true_timestamp);
     hours = Math.floor(HMSTime / 3600);
@@ -65,7 +71,18 @@ function timestamp_calc() {
     minutes = Math.floor(HMSTime / 60);
     seconds = HMSTime % 60;
 }
-function timestamp() {
+function iend () {
+    if (isaudio === false) {
+        player.playVideo();
+        player.seekTo(true_timestamp, true);
+    }
+    if (isaudio === true) {
+        player.play();
+        player.currentTime = true_timestamp;
+    }
+}
+//YouTube Player Code Below
+function vtimestamp() {
     timestamp_calc();
     if (Math.floor(true_timestamp) == -2) {
         player.playVideo();
@@ -84,11 +101,11 @@ function timestamp() {
         document.getElementById("friends").innerHTML = "It's intermission! We're paused at " + hours + ":" + minutes.toString().padStart(2, "0") + ":" + seconds.toFixed(1).toString().padStart(4, "0") + "!" + "<br />The party resumes in " + Math.floor(intermission_time / 60).toString().padStart(2, "0") + ":" + (intermission_time % 60).toFixed(1).toString().padStart(4, "0"); //Whew! That's an eyeful!
         document.getElementById("refresh").style.display = 'none';
     } else {
-        document.getElementById("friends").innerHTML = 'The party starts in ' + hours + ":" + minutes.toString().padStart(2, "0") + ":" + seconds.toFixed(1).toString().padStart(4, "0") + "!";
+        document.getElementById("friends").innerHTML = 'The watch-party starts in ' + hours + ":" + minutes.toString().padStart(2, "0") + ":" + seconds.toFixed(1).toString().padStart(4, "0") + "!";
         document.getElementById("refresh").style.display = 'none';
     }
 }
-function onYouTubeIframeAPIReady() { //I will soon make it possible for audio elements to be created as well, and make a "Listen Party" option
+function onYouTubeIframeAPIReady() {
     timestamp_calc();
     if (true_timestamp >= 0 && true_timestamp < video_length && is_intermission === false){
         player = new YT.Player('player', {
@@ -116,10 +133,55 @@ function onYouTubeIframeAPIReady() { //I will soon make it possible for audio el
     }
 }
 function onPlayerReady(event) {
-    setInterval(timestamp, 100);
+    setInterval(vtimestamp, 100);
     if (true_timestamp >= 0 && is_intermission === false){
         event.target.playVideo();
     }
 }
 function onPlayerStateChange(event) {
+}
+//End of YouTube Player Code
+//Audio Player Code Below
+function atimestamp() {
+    timestamp_calc();
+    if (Math.round(true_timestamp) == 0) {
+        player.play();
+    }
+    if (is_intermission === true) {
+        player.pause();
+    }
+    if (true_timestamp >= 0 && true_timestamp < video_length && is_intermission === false){
+        document.getElementById("friends").innerHTML = 'The party is at ' + hours + ":" + minutes.toString().padStart(2, "0") + ":" + seconds.toFixed(1).toString().padStart(4, "0") + "!";
+        document.getElementById("refresh").style.display = 'block';
+        document.getElementById("refresh").onclick = function() {player.play(), player.currentTime = true_timestamp};
+        player.controls = true;
+    } else if (true_timestamp >= video_length){
+        document.getElementById("refresh").style.display = 'none';
+        document.getElementById("friends").innerHTML = "There's no party here!<br />Go home, you rascally kids!";
+    } else if (is_intermission === true){
+        document.getElementById("friends").innerHTML = "It's intermission! We're paused at " + hours + ":" + minutes.toString().padStart(2, "0") + ":" + seconds.toFixed(1).toString().padStart(4, "0") + "!" + "<br />The party resumes in " + Math.floor(intermission_time / 60).toString().padStart(2, "0") + ":" + (intermission_time % 60).toFixed(1).toString().padStart(4, "0"); //Whew! That's an eyeful!
+        document.getElementById("refresh").style.display = 'none';
+        player.controls = false;
+    } else {
+        document.getElementById("friends").innerHTML = 'The listen-party starts in ' + hours + ":" + minutes.toString().padStart(2, "0") + ":" + seconds.toFixed(1).toString().padStart(4, "0") + "!";
+        document.getElementById("refresh").style.display = 'none';
+        player.controls = false;
+    }
+}
+function audioready() {
+    timestamp_calc();
+    if (true_timestamp >= 0 && true_timestamp < video_length && is_intermission === false){
+        player = document.createElement("AUDIO");
+        player.src = audiosrc + "#t=" + (true_timestamp + 3);
+        player.controls = true;
+        document.getElementById("player").appendChild(player);
+        player.play();
+    } else if (true_timestamp >= video_length) {
+        player = null;
+    } else {
+        player = document.createElement("AUDIO");
+        player.src = audiosrc;
+        document.getElementById("player").appendChild(player);
+    }
+    setInterval(atimestamp, 100);
 }
